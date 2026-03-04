@@ -1,51 +1,75 @@
 #version 300 es
 precision highp float;
-out vec4 fragColor;
 
+out vec4 fragColor;
 uniform vec2 iResolution;
 uniform float iTime;
 
-// 2D rotation matrix
-vec2 rotate2D(vec2 p, float angle) {
-    float c = cos(angle);
-    float s = sin(angle);
-    return vec2(
-        p.x * c - p.y * s,
-        p.x * s + p.y * c
-    );
-}
-
-float sdBox(vec2 p, vec2 b) {
-    vec2 d = abs(p) - b;
-    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
-}
-
-float sdCircle(vec2 p, float r)
+// 3d sdf for sphere
+// \param p is the center of the sphere in 3d space , 
+// \param r is the float radius of the sphere
+float sdSphere(vec3 p, float r)
 {
     return length(p) - r;
 }
 
+// Scene function
+// returns shortest function to any object defined in the scene
+// \param p : origin given by caller 
+float scene(vec3 p) 
+{
+    float sphere = sdSphere(p, 1.0);
+    return sphere;
+}
+
+// raymarch function
+// \param ro ray origin 
+// \param rd ray direction 
+float raymarch(vec3 ro, vec3 rd)
+{
+    float t = 0.0; // total distance travelled 
+
+    int MAX_STEPS = 80;
+    for (int i = 0; i < MAX_STEPS; i++)
+    {
+        // current position along ray
+        vec3 p = ro + rd * t;
+
+        // distance to nearest object in the scene
+        float d = scene(p);
+
+        // march forward this distance
+        t += d;
+
+        if ( d < 0.001) { return t; } // HIT, return distance travelled
+        if ( t > 100.0) { break; } // too far, stop the march 
+    }
+
+    // if failed to find object 
+    return -1.0;
+}
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = (fragCoord - 0.5 * iResolution.xy) / iResolution.y;
-    
-    // scale up coordinates 
-    // the bigger the number, the more objects you ll have with fract
-    uv *= 5.0;
 
-    // create repeating cells using fract 
-    vec2 cellUV = fract(uv) - 0.5;
-    cellUV = rotate2D(cellUV, iTime);
+    // camera position ( = ray origin )
+    vec3 ro = vec3(0, 0, -3);
 
-    // draw circles 
-    float circleDist = sdCircle(cellUV, 0.3) + 1.0 * 0.1 * sin(iTime);
-    float circle = smoothstep(0.001, 0.0, circleDist);
+    // ray direction through pixel 
+    vec3 rd = normalize(vec3(uv, 1));
 
-    // boxes
-    float boxDist = sdBox(cellUV, vec2(0.5, 0.5));
-    float box = smoothstep(0.001, 0.0, boxDist);
+    // in the pixel, shoot the ray
+    float t = raymarch(ro, rd);
 
-    vec3 col = vec3(box);
-    
+    // background color
+    vec3 col = vec3(0.5, 0.7, 10.0 - uv.y);
+
+    if ( t > 0.0 )
+    {
+        // whit if we hit something
+        col = vec3(1.0);
+    }
+
     fragColor = vec4(col, 1.0);
 }
 
