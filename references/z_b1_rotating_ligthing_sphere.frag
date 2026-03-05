@@ -13,17 +13,6 @@ float sdSphere(vec3 p, float r)
     return length(p) - r;
 }
 
-float sdBox(vec3 p, vec3 b)
-{
-    vec3 q = abs(p) - b;
-    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
-}
-
-float sdPlane(vec3 p, float height)
-{
-    return p.y - height;
-}
-
 // Scene function
 // returns shortest function to any object defined in the scene
 // \param p : origin given by caller 
@@ -31,14 +20,9 @@ float scene(vec3 p)
 {
     // sphere position
     vec3 spherePos = vec3(10.0 * cos(iTime), 0.0, 2.0 * sin(iTime));
+
     float sphere = sdSphere( p - spherePos, 1.0);
-
-    // Box position
-    float box = sdBox(p - vec3(7, 1, -1), vec3(0.7, 0.7, 0.7));
-
-    float ground = sdPlane(p, 0.0);
-
-    return min(sphere, ground);
+    return sphere;
 }
 
 // \param p is the incident 3d vector
@@ -111,7 +95,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float diff = max(dot(normal, lightDir), 0.0); 
 
         // ambiant lighting 
-        float ambient = 0.3;
+        float ambient = 0.5;
 
         col = vec3(diff + ambient);
     }
